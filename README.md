@@ -35,12 +35,12 @@ This is a business call. The team says: *"We'd only roll this out if it lifts th
 **Step 3: Read the result.**
 
 > With 25,000 people per group, this test can reliably detect a lift of **0.49 percentage points (12.3% relative)**.
-> That is smaller than your 15% threshold, so the test is **feasible** ✅
+> That is smaller than your 15% threshold, so the test is **feasible**
 
 **Step 4: Now try a "what if?"** The team asks: *"Can we test two new subject lines against the old one?"* Change groups from 2 to 3:
 
 > With 3 groups, the smallest detectable lift grows to **16.5% relative**.
-> That is bigger than your 15% threshold, so the test is **not feasible** ❌
+> That is bigger than your 15% threshold, so the test is **not feasible**
 > Reverse mode says you'd need about **60,800 people**, and you have 50,000 (82% of what's needed).
 
 Now you can choose *before launch*: drop back to two emails, get a bigger audience, or accept that you can only detect bigger lifts. That is the whole point of the tool.
