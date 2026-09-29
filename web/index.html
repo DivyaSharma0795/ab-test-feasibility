@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MDD &amp; Sample Size Calculator</title>
+<style>
+:root{--bg:#fff;--fg:#1f2937;--mut:#6b7280;--card:#f3f4f6;--ac:#2563eb;--ok:#15803d;--bad:#b91c1c;--bd:#d1d5db}
+@media(prefers-color-scheme:dark){:root{--bg:#111827;--fg:#e5e7eb;--mut:#9ca3af;--card:#1f2937;--ac:#60a5fa;--ok:#4ade80;--bad:#f87171;--bd:#374151}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,Arial,sans-serif;background:var(--bg);color:var(--fg)}
+main{max-width:980px;margin:0 auto;padding:24px 16px}h1{margin:0 0 4px}h2{margin:28px 0 8px;font-size:18px}
+.sub{color:var(--mut);margin:0 0 16px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+label{display:block;font-size:12px;color:var(--mut)}input,select{width:100%;padding:7px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}.card{background:var(--card);border-radius:10px;padding:12px}
+.card b{display:block;font-size:22px}.card span{font-size:12px;color:var(--mut)}.ok{color:var(--ok)}.bad{color:var(--bad)}
+.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{padding:6px 10px;text-align:right;border-bottom:1px solid var(--bd)}th:first-child,td:first-child{text-align:left}
+svg{width:100%;height:auto;background:var(--card);border-radius:10px}.note{color:var(--mut);font-size:12px;margin-top:24px}
+</style></head><body><main>
+<h1>A/B Test MDD &amp; Sample Size Calculator</h1>
+<p class="sub">How small a lift can k groups detect, and how big must the audience be?</p>
+<div class="grid" id="inputs">
+<div><label>Metric type</label><select id="metric"><option>Proportion</option><option>Continuous</option></select></div>
+<div><label>Audience size (N)</label><input id="N" type="number" value="200000" min="100"></div>
+<div><label>Share measured (%) e.g. response rate</label><input id="meas" type="number" value="100" min="1" max="100"></div>
+<div><label id="baseLbl">Baseline rate (0-1)</label><input id="base" type="number" value="0.05" step="0.005"></div>
+<div id="sdWrap" hidden><label>Standard deviation</label><input id="sd" type="number" value="50"></div>
+<div><label>Groups (incl. control)</label><input id="k" type="number" value="2" min="2" max="10"></div>
+<div><label>Control share (blank = equal split)</label><input id="ctrl" type="number" step="0.05" min="0.05" max="0.95" placeholder="equal"></div>
+<div><label>Alpha</label><input id="alpha" type="number" value="0.05" step="0.01"></div>
+<div><label>Power (1 - beta)</label><input id="power" type="number" value="0.8" step="0.05"></div>
+<div><label>Test type</label><select id="tails"><option>Two-tailed</option><option>One-tailed</option></select></div>
+<div><label>Multiple-comparison correction</label><select id="corr"><option>Bonferroni</option><option>Sidak</option><option>None</option></select></div>
+<div><label>Minimum useful relative lift (%)</label><input id="minl" type="number" value="5" step="0.5"></div>
+</div>
+<h2>Forward mode: what can this audience detect?</h2><div class="cards" id="fwd"></div>
+<h2>Feasibility by number of groups (equal split)</h2><div class="scroll"><table id="tbl"></table></div>
+<h2>Relative MDD vs audience size</h2><div id="chart"></div>
+<h2>Reverse mode: how big must the audience be?</h2>
+<div class="grid"><div><label>Target relative lift to detect (%)</label><input id="tgt" type="number" value="5" step="0.5"></div></div>
+<div class="cards" id="rev" style="margin-top:12px"></div>
+<p class="note">Assumptions: normal approximation; variance at baseline; each arm tested against control (m = k-1 comparisons); MDD = (z<sub>alpha</sub> + z<sub>power</sub>) &times; sqrt(var &times; (1/n<sub>control</sub> + 1/n<sub>treatment</sub>)).</p>
+</main>
+<script>
+function invNorm(p){const a=[-39.69683028665376,220.9460984245205,-275.9285104469687,138.357751867269,-30.66479806614716,2.506628277459239],
+b=[-54.47609879822406,161.5858368580409,-155.6989798598866,66.80131188771972,-13.28068155288572],
+c=[-0.007784894002430293,-0.3223964580411365,-2.400758277161838,-2.549732539343734,4.374664141464968,2.938163982698783],
+d=[0.007784695709041462,0.3224671290700398,2.445134137142996,3.754408661907416],pl=0.02425;let q,r;
+if(p<pl){q=Math.sqrt(-2*Math.log(p));return(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1)}
+if(p<=1-pl){q=p-.5;r=q*q;return(((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1)}
+q=Math.sqrt(-2*Math.log(1-p));return-(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1)}
+const $=id=>document.getElementById(id),v=id=>parseFloat($(id).value);
+const adj=(al,m,t)=>t==="Bonferroni"?al/m:t==="Sidak"?1-Math.pow(1-al,1/m):al;
+const zsum=(al,pw,m,tl,t)=>invNorm(1-adj(al,m,t)/(tl==="Two-tailed"?2:1))+invNorm(pw);
+const mdd=(n,k,c,vr,zs)=>zs*Math.sqrt(vr*(1/(n*c)+(k-1)/(n*(1-c))));
+const reqN=(dl,k,c,vr,zs)=>zs*zs*vr*(1/c+(k-1)/(1-c))/(dl*dl);
+const f0=x=>Math.round(x).toLocaleString(),pc=x=>(100*x).toFixed(2)+"%";
+const card=(t,val,cls)=>`<div class="card"><span>${t}</span><b class="${cls||""}">${val}</b></div>`;
+function run(){
+ const prop=$("metric").value==="Proportion";$("sdWrap").hidden=prop;
+ $("baseLbl").textContent=prop?"Baseline rate (0-1)":"Baseline mean";
+ const N=v("N"),meas=v("meas")/100,base=v("base"),k=Math.max(2,Math.round(v("k"))),al=v("alpha"),pw=v("power"),
+  tl=$("tails").value,co=$("corr").value,minl=v("minl")/100,vr=prop?base*(1-base):Math.pow(v("sd"),2),
+  cIn=parseFloat($("ctrl").value),c=isNaN(cIn)?1/k:cIn,nA=N*meas,zs=zsum(al,pw,k-1,tl,co);
+ if(!(N>0&&base>0&&vr>0&&al>0&&pw>0&&pw<1)){return}
+ const d=mdd(nA,k,c,vr,zs),rel=d/base,ok=rel<=minl;
+ $("fwd").innerHTML=card("MDD (absolute)",d.toFixed(prop?4:3))+card("MDD (relative)",pc(rel))+
+  card("Control / per-treatment n",f0(nA*c)+" / "+f0(nA*(1-c)/(k-1)))+card("Verdict",ok?"Feasible":"Not feasible",ok?"ok":"bad");
+ let h="<tr><th>Groups</th><th>n per group</th><th>Alpha / comparison</th><th>Relative MDD</th><th>Feasible</th></tr>";
+ for(let kk=2;kk<=6;kk++){const r=mdd(nA,kk,1/kk,vr,zsum(al,pw,kk-1,tl,co))/base;
+  h+=`<tr><td>${kk}</td><td>${f0(nA/kk)}</td><td>${adj(al,kk-1,co).toFixed(4)}</td><td>${pc(r)}</td><td class="${r<=minl?"ok":"bad"}">${r<=minl?"Yes":"No"}</td></tr>`}
+ $("tbl").innerHTML=h;
+ const tgt=v("tgt")/100,need=reqN(tgt*base,k,c,vr,zs),aud=need/meas;
+ $("rev").innerHTML=card("Total audience required",f0(aud))+card("Control / per-treatment n",f0(need*c)+" / "+f0(need*(1-c)/(k-1)))+
+  card("Audience available vs required",pc(N/aud),N>=aud?"ok":"bad");
+ draw(N,meas,base,vr,al,pw,tl,co,minl);
+}
+function draw(N,meas,base,vr,al,pw,tl,co,minl){
+ const W=700,H=300,L=52,B=34,T=14,R=90,xs=[],cols=["#2563eb","#16a34a","#d97706","#9333ea"],ser=[];
+ for(let i=1;i<=20;i++)xs.push(N*i/10);
+ for(let kk=2;kk<=5;kk++){const z=zsum(al,pw,kk-1,tl,co);ser.push(xs.map(x=>mdd(x*meas,kk,1/kk,vr,z)/base))}
+ const ymax=Math.max(...ser.flat(),minl)*1.05,X=x=>L+(x-xs[0])/(xs[19]-xs[0])*(W-L-R),Y=y=>T+(1-y/ymax)*(H-T-B);
+ let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Relative MDD vs audience size" font-size="11" fill="currentColor">`;
+ for(let i=0;i<=4;i++){const y=ymax*i/4;s+=`<line x1="${L}" x2="${W-R}" y1="${Y(y)}" y2="${Y(y)}" stroke="#9ca3af" stroke-opacity=".3"/><text x="${L-6}" y="${Y(y)+4}" text-anchor="end">${(100*y).toFixed(1)}%</text>`}
+ for(let i=0;i<=4;i++){const x=xs[0]+(xs[19]-xs[0])*i/4;s+=`<text x="${X(x)}" y="${H-12}" text-anchor="middle">${f0(x)}</text>`}
+ ser.forEach((a,i)=>{s+=`<polyline fill="none" stroke="${cols[i]}" stroke-width="2" points="${a.map((y,j)=>X(xs[j])+","+Y(y)).join(" ")}"/><text x="${W-R+6}" y="${Y(a[19])+4}" fill="${cols[i]}">${i+2} groups</text>`});
+ s+=`<line x1="${L}" x2="${W-R}" y1="${Y(minl)}" y2="${Y(minl)}" stroke="#dc2626" stroke-dasharray="5 4"/><text x="${W-R+6}" y="${Y(minl)+4}" fill="#dc2626">min lift</text></svg>`;
+ $("chart").innerHTML=s}
+document.querySelectorAll("input,select").forEach(e=>e.addEventListener("input",run));run();
+</script></body></html>
