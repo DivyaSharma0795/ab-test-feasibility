@@ -1,6 +1,6 @@
 # The Math Behind the Calculator (No Stats Degree Required)
 
-This guide explains every number the calculator uses through one running story about soda. Read it top to bottom once, then use it as a reference.
+This guide explains every number the calculator uses through one running story about soda.
 
 **The big idea in one sentence:** before you run a test, the MDD tells you the *smallest real difference your test would reliably notice*. If the difference you care about is smaller than that, the test is **not feasible** as designed (see [section 7](#7-is-my-test-feasible)).
 
@@ -114,7 +114,7 @@ MDD >  minimum useful lift  →  Not feasible
 
 ### Where does the "minimum useful lift" come from?
 
-It comes from the business, not from statistics. It is the smallest improvement that would change what you do: the point where rolling out the change pays for itself, or where the team would bother acting. Examples: "Below +5 points we wouldn't switch drinks," or "under a 10% relative increase in sign-ups isn't worth the engineering work."
+It comes from you, not from statistics. It is the smallest improvement that would change what you do: the point where rolling out the change pays for itself, or where the team would bother acting. Examples: "Below +5 points we wouldn't switch drinks," or "under a 10% relative increase in sign-ups isn't worth the engineering work."
 
 Decide it **before** you look at the MDD. If you pick it afterwards, it's tempting to choose whatever number makes the test look feasible.
 
